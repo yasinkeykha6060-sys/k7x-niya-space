@@ -1,6 +1,7 @@
 import { EARTH, EARTH_GAME, G0, mulberry32, verletOrbit, orbitalElements, predictApsis } from "./physics.js";
 import { makeWorld, stepWorld, focused, dropStage } from "./vehicle.js";
 import { gravityTurn } from "./guidance.js";
+import { drawCraft, nozzleWorld } from "./rocketart.js";
 
 const DT = 1 / 120;
 
@@ -69,9 +70,27 @@ export function createFlight(canvas, design, options) {
       samples.push({ t: world.time, alt: vessel.altitude, phi: vessel.phi, broken: vessel.parts.filter((part) => part.broken).map((part) => part.uid) });
       if (samples.length > 240) samples.shift();
     }
-    if (input.throttle > 0.2 && vessel.parts.some((part) => part.engineOn)) {
-      smoke.push({ x: vessel.x, y: vessel.y, life: 1, phi: vessel.phi });
-      if (smoke.length > (options.quality === "low" ? 40 : 120)) smoke.shift();
+    if (vessel.parts.some((part) => part.engineOn && (part.engine && part.engine.solid || input.throttle > 0.05))) {
+      vessel.parts.forEach((part) => {
+        if (!part.engineOn || part.broken) return;
+        const tip = nozzleWorld(vessel, part);
+        const noseX = Math.cos(vessel.phi);
+        const noseY = Math.sin(vessel.phi);
+        const eastX = Math.sin(vessel.phi);
+        const eastY = -Math.cos(vessel.phi);
+        const back = vessel.onPad ? 8 + Math.random() * 10 : 22 + Math.random() * 16;
+        const side = (Math.random() - 0.5) * (vessel.onPad ? 36 : 8);
+        smoke.push({
+          x: tip.x,
+          y: tip.y,
+          vx: -noseX * back + eastX * side,
+          vy: -noseY * back + eastY * side,
+          life: 1,
+          r: (vessel.onPad ? 1.4 : 0.7) + Math.random()
+        });
+      });
+      const cap = options.quality === "low" ? 50 : 160;
+      while (smoke.length > cap) smoke.shift();
     }
   }
 
@@ -100,22 +119,53 @@ export function createFlight(canvas, design, options) {
       note,
       event
     };
+    if (result.crashed && options.audio) options.audio.boom();
     if (options.onReport) options.onReport(result);
   }
 
+  function bounds(vessel) {
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    vessel.parts.forEach((part) => {
+      if (part.broken) return;
+      minY = Math.min(minY, part.localY - part.h / 2);
+      maxY = Math.max(maxY, part.localY + part.h / 2);
+      minX = Math.min(minX, part.localX - part.w / 2);
+      maxX = Math.max(maxX, part.localX + part.w / 2);
+    });
+    if (!Number.isFinite(minY)) return { h: 8, w: 2, midY: 0 };
+    return { h: Math.max(4, maxY - minY), w: Math.max(1.2, maxX - minX), midY: (minY + maxY) / 2 };
+  }
+
   function drawSky(w, h, alt) {
-    const t = Math.max(0, Math.min(1, alt / 80000));
+    const t = Math.max(0, Math.min(1, (alt - 8000) / 70000));
     const sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, mix("#1a1240", "#7ec8ff", 1 - t));
-    sky.addColorStop(1, mix("#ff8fc2", "#16324f", t));
+    if (t < 0.05) {
+      sky.addColorStop(0, "#2f86d8");
+      sky.addColorStop(0.45, "#79c0f5");
+      sky.addColorStop(1, "#d7f1ff");
+    } else {
+      sky.addColorStop(0, mix("#050814", "#1c4f86", 1 - t));
+      sky.addColorStop(1, mix("#9ec9ef", "#16324f", t));
+    }
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, w, h);
-    if (t > 0.35) {
-      ctx.fillStyle = "rgba(255,244,230,0.85)";
-      for (let i = 0; i < 40; i += 1) {
-        const x = (i * 97 + alt * 0.01) % w;
-        const y = (i * 53) % (h * 0.7);
-        ctx.fillRect(x, y, 2, 2);
+    if (t > 0.45) {
+      ctx.fillStyle = "#fff6e8";
+      for (let i = 0; i < 70; i += 1) {
+        ctx.fillRect((i * 97) % w, (i * 53) % h, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
+      }
+    } else {
+      ctx.fillStyle = "rgba(255,255,255,0.72)";
+      for (let i = 0; i < 5; i += 1) {
+        const x = (i * 180 + 40) % w;
+        const y = 30 + (i * 37) % (h * 0.35);
+        ctx.beginPath();
+        ctx.ellipse(x, y, 46, 16, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 30, y + 4, 28, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
   }
@@ -127,48 +177,118 @@ export function createFlight(canvas, design, options) {
     const vessel = focused(world);
     if (!vessel) return;
     const alt = Math.max(0, vessel.altitude || 0);
+    const size = bounds(vessel);
     drawSky(w, h, alt);
-    let scale = 7;
-    if (map) scale = (Math.min(w, h) * 0.28) / planet.radius;
-    else if (alt > 1500) scale = Math.min(7, 900 / Math.max(400, alt));
-    if (alt > 60000 && !map) scale = Math.min(scale, (h * 0.22) / (planet.radius + alt));
-    const camX = map ? 0 : vessel.x;
-    const camY = map ? 0 : vessel.y;
-    const project = (x, y) => ({ x: w / 2 + (x - camX) * scale, y: h / 2 - (y - camY) * scale });
-    const ground = project(0, 0);
-    ctx.beginPath();
-    ctx.arc(ground.x, ground.y, planet.radius * scale, 0, Math.PI * 2);
-    ctx.fillStyle = "#6f8f6a";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(126,200,255,0.35)";
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.arc(ground.x, ground.y, (planet.radius + planet.karman * 0.4) * scale, 0, Math.PI * 2);
-    ctx.stroke();
+    let scale = Math.min((h * 0.52) / size.h, (w * 0.34) / size.w);
+    if (map) scale = (Math.min(w, h) * 0.33) / planet.radius;
+    else if (alt > 2500) scale = Math.min(scale, Math.max(110 / size.h, (h * 0.4) / (size.h + (alt - 2000) * 0.018)));
+    if (alt > 30000 && !map) scale = Math.min(scale, (h * 0.18) / (planet.radius * 0.012 + alt));
+    const noseX = Math.cos(vessel.phi);
+    const noseY = Math.sin(vessel.phi);
+    const bias = alt < 500 ? -size.h * 0.28 : 0;
+    const lookX = map ? 0 : vessel.x + (size.midY - vessel.comY + bias) * noseX;
+    const lookY = map ? 0 : vessel.y + (size.midY - vessel.comY + bias) * noseY;
+    const project = (x, y) => ({ x: w / 2 + (x - lookX) * scale, y: h * 0.46 - (y - lookY) * scale });
+    drawTerrain(project, vessel, scale, w, h, alt);
     if (map && vessel.alive) {
       const el = orbitalElements(planet, vessel.x, vessel.y, vessel.vx, vessel.vy);
       if (el.e < 0.99 && Number.isFinite(el.a)) drawEllipse(project, el, vessel);
     }
     smoke.forEach((puff) => {
-      puff.life -= 0.01;
+      puff.life -= 0.012;
+      puff.x += (puff.vx || 0) * 0.016;
+      puff.y += (puff.vy || 0) * 0.016;
+      puff.r += 0.03;
       const p = project(puff.x, puff.y);
-      ctx.globalAlpha = Math.max(0, puff.life) * 0.35;
-      ctx.fillStyle = "#ffd7ea";
+      ctx.globalAlpha = Math.max(0, puff.life) * 0.28;
+      ctx.fillStyle = "#d5dbe0";
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 6 + (1 - puff.life) * 10, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, Math.max(4, puff.r * scale), 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     });
     world.vessels.forEach((body) => {
       if (!body.alive && body !== vessel) return;
-      drawVessel(project, body, body === vessel, scale);
+      const b = project(body.x, body.y);
+      if (scale < 0.01) {
+        ctx.fillStyle = "#fff6e4";
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+      }
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      drawCraft(ctx, body, scale, body === vessel ? input.throttle : 0, world.time);
+      ctx.restore();
     });
+    if (alt < 400 && !map) drawTower(project, scale, size.h);
     if (vessel.countdown > 0 && vessel.onPad) {
-      ctx.fillStyle = "#fff4e6";
-      ctx.font = "48px Vazirmatn, Tahoma";
+      ctx.fillStyle = "#102033";
+      ctx.font = "64px Vazirmatn, Tahoma";
       ctx.textAlign = "center";
-      ctx.fillText(String(Math.ceil(vessel.countdown)), w / 2, h * 0.28);
+      ctx.fillText(String(Math.ceil(vessel.countdown)), w / 2, h * 0.16);
     }
+  }
+
+  function drawTerrain(project, vessel, scale, w, h, alt) {
+    const ang = Math.atan2(vessel.y, vessel.x);
+    const span = Math.max(w / Math.max(scale, 0.00001), 400);
+    ctx.beginPath();
+    for (let i = 0; i <= 48; i += 1) {
+      const a = ang + (i / 48 - 0.5) * span / planet.radius;
+      const p = project(Math.cos(a) * planet.radius, Math.sin(a) * planet.radius);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.lineTo(w + 40, h + 40);
+    ctx.lineTo(-40, h + 40);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, h * 0.45, 0, h);
+    g.addColorStop(0, alt > 40000 ? "#1d4d86" : "#67a35a");
+    g.addColorStop(0.25, alt > 40000 ? "#16355c" : "#3f7d45");
+    g.addColorStop(1, "#243224");
+    ctx.fillStyle = g;
+    ctx.fill();
+    if (alt < 2500 && !map) {
+      const pad = project(0, planet.radius);
+      ctx.fillStyle = "#b7b1a4";
+      ctx.fillRect(pad.x - 16 * scale, pad.y - 0.4 * scale, 32 * scale, 0.5 * scale);
+      ctx.fillStyle = "#8d887e";
+      ctx.fillRect(pad.x - 7 * scale, pad.y - 0.15 * scale, 14 * scale, 0.2 * scale);
+    }
+    if (alt < 8000 && scale > 0.4) {
+      ctx.strokeStyle = "rgba(180,220,255,0.35)";
+      ctx.lineWidth = Math.max(6, 8000 * scale);
+      ctx.beginPath();
+      for (let i = 0; i <= 24; i += 1) {
+        const a = ang + (i / 24 - 0.5) * span / planet.radius;
+        const r = planet.radius + 12000;
+        const p = project(Math.cos(a) * r, Math.sin(a) * r);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function drawTower(project, scale, rocketH) {
+    const base = project(0, planet.radius);
+    const top = project(0, planet.radius + rocketH * 0.92);
+    const x = base.x + 4.2 * scale;
+    ctx.strokeStyle = "#4d565f";
+    ctx.lineWidth = Math.max(2, 0.18 * scale);
+    ctx.beginPath();
+    ctx.moveTo(x, base.y);
+    ctx.lineTo(x, top.y);
+    ctx.moveTo(x + 1.4 * scale, base.y);
+    ctx.lineTo(x + 1.4 * scale, top.y);
+    for (let i = 0; i < 8; i += 1) {
+      const y = base.y + (top.y - base.y) * (i / 8);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 1.4 * scale, y + (top.y - base.y) / 8);
+    }
+    ctx.stroke();
   }
 
   function drawEllipse(project, el, vessel) {
@@ -185,42 +305,6 @@ export function createFlight(canvas, design, options) {
       else ctx.lineTo(p.x, p.y);
     }
     ctx.stroke();
-  }
-
-  function drawVessel(project, vessel, main, worldScale) {
-    const b = project(vessel.x, vessel.y);
-    if (worldScale < 0.01) {
-      ctx.fillStyle = "#fff4e6";
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
-      ctx.fill();
-      return;
-    }
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(-vessel.phi + Math.PI / 2);
-    vessel.parts.forEach((part) => {
-      if (part.broken) return;
-      const x = (part.localX - vessel.comX) * worldScale;
-      const y = -(part.localY - vessel.comY) * worldScale;
-      ctx.fillStyle = part.broken ? "#e84a7f" : part.engineOn ? "#ffd27a" : (main ? (options.color || vessel.color) : "#c9a7ff");
-      ctx.strokeStyle = options.accent || vessel.accent || "#fff4e6";
-      ctx.lineWidth = 2;
-      const pw = Math.max(3, part.w * worldScale);
-      const ph = Math.max(3, part.h * worldScale);
-      roundRect(ctx, x - pw / 2, y - ph / 2, pw, ph, 4);
-      ctx.fill();
-      ctx.stroke();
-      if (part.engineOn && input.throttle > 0.05 && !map) {
-        ctx.fillStyle = "rgba(255,143,194,0.9)";
-        ctx.beginPath();
-        ctx.moveTo(x - pw * 0.3, y + ph / 2);
-        ctx.lineTo(x, y + ph / 2 + 16 * input.throttle);
-        ctx.lineTo(x + pw * 0.3, y + ph / 2);
-        ctx.fill();
-      }
-    });
-    ctx.restore();
   }
 
   function frame(now) {
@@ -256,8 +340,9 @@ export function createFlight(canvas, design, options) {
     draw();
     if (options.onHud) options.onHud(hud());
     if (options.audio) {
-      const burn = vessel && vessel.parts.some((part) => part.engineOn) ? input.throttle : 0;
-      options.audio.engine(burn);
+      const burning = vessel && vessel.parts.some((part) => part.engineOn && !part.broken);
+      const solid = vessel && vessel.parts.some((part) => part.engineOn && part.engine && part.engine.solid);
+      options.audio.engine(burning ? (solid ? 1 : input.throttle) : 0);
     }
     if (running) raf = requestAnimationFrame(frame);
   }
@@ -287,6 +372,7 @@ export function createFlight(canvas, design, options) {
       ap: Number.isFinite(el.ra) ? el.ra - planet.radius : null,
       pe: el.rp - planet.radius,
       fuel: vessel.parts.reduce((sum, part) => sum + part.fuel, 0),
+      stages: stageRows(vessel),
       orbit: el.e < 1 && el.rp - planet.radius > planet.karman,
       result
     };
@@ -366,21 +452,30 @@ export function createFlight(canvas, design, options) {
   };
 }
 
+function stageRows(vessel) {
+  const rows = new Map();
+  const seen = new Set();
+  vessel.parts.forEach((part) => {
+    if (!rows.has(part.stage)) rows.set(part.stage, { stage: part.stage, fuel: 0, max: 0, on: false, name: "سازه" });
+    const row = rows.get(part.stage);
+    if (part.engine) {
+      row.on = row.on || !!part.engineOn;
+      row.name = part.name;
+    }
+    if (part.maxFuel > 0 && !seen.has(part.uid)) {
+      seen.add(part.uid);
+      row.fuel += part.fuel;
+      row.max += part.maxFuel;
+    }
+  });
+  return [...rows.values()].sort((a, b) => b.stage - a.stage);
+}
+
 function mix(a, b, t) {
   const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
   const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
   const c = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
   return "rgb(" + c.join(",") + ")";
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 export { G0, dropStage };

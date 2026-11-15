@@ -1,4 +1,4 @@
-const CACHE = "niya-space-v1";
+const CACHE = "niya-space-v3";
 const FILES = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const FILES = [
   "./js/vehicle.js",
   "./js/guidance.js",
   "./js/flight.js",
+  "./js/rocketart.js",
   "./js/builder.js",
   "./js/company.js",
   "./js/storage.js",

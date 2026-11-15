@@ -4,8 +4,9 @@ import { PARTS, TECH } from "../data/parts.js";
 import { HANDBOOK } from "../data/handbook.js";
 import { freshGame, catchUp, applyReport, research, hire, upgrade, padLimit, MISSIONS, failFactor } from "./company.js";
 import { loadSave, writeSave } from "./storage.js";
-import { preflight } from "./vehicle.js";
+import { preflight, compileDesign } from "./vehicle.js";
 import { createFlight } from "./flight.js";
+import { drawCraft } from "./rocketart.js";
 import { stamp, addChild, removeNode, walk } from "./builder.js";
 
 const audio = createAudio();
@@ -211,22 +212,24 @@ function textBlock(text) {
 }
 function paintHud(data) {
   if (!data) return;
-  hud.innerHTML = "";
   const bits = [
     ["ارتفاع", km(data.alt)],
-    ["بالا", num(data.radial, 0)],
-    ["افق", num(data.horizontal, 0)],
+    ["بالا", num(data.radial, 0) + " m/s"],
+    ["افق", num(data.horizontal, 0) + " m/s"],
     ["g", num(data.g, 1)],
     ["TWR", num(data.twr, 2)],
-    ["Q", num(data.q / 1000, 1)],
-    ["اوج", data.alt > 20000 && data.ap != null ? km(data.ap) : "—"],
-    ["حضیض", data.alt > 20000 ? km(data.pe) : "—"]
+    ["Q", num(data.q / 1000, 1)]
   ];
-  bits.forEach(([label, value]) => {
-    const el = document.createElement("b");
-    el.innerHTML = esc(label) + " <span class='num'>" + esc(value) + "</span>";
-    hud.append(el);
-  });
+  if (data.alt > 20000) {
+    bits.push(["اوج", data.ap == null ? "—" : km(data.ap)]);
+    bits.push(["حضیض", km(data.pe)]);
+  }
+  hud.innerHTML = bits.map(([label, value]) => esc(label) + " <span class='num'>" + esc(value) + "</span>").map((html) => "<b>" + html + "</b>").join("");
+  const side = document.querySelector("#stages");
+  side.innerHTML = (data.stages || []).map((row) => {
+    const pct = row.max > 0 ? Math.max(0, Math.min(100, row.fuel / row.max * 100)) : 0;
+    return "<div class='stage-card'>" + esc(row.name) + "<i><b style='width:" + pct.toFixed(0) + "%'></b></i></div>";
+  }).join("");
 }
 function closeFlight() {
   if (flight) flight.stop();
@@ -248,7 +251,10 @@ function build() {
   name.value = editing.name;
   name.oninput = () => { editing.name = name.value; };
   head.append(name, button("ذخیره", saveDesign), button("پرتاب", () => launch(editing)));
-  screen.append(head, notes(info));
+  const yard = document.createElement("canvas");
+  yard.id = "yard";
+  screen.append(head, yard, notes(info));
+  requestAnimationFrame(() => paintYard(yard, editing));
   const tree = document.createElement("div");
   tree.className = "card tile tree";
   walk(editing.root, (node, depth) => {
@@ -291,6 +297,52 @@ function build() {
     if (!pick || !selected) { toast("اول قطعه و جای وصل را انتخاب کن."); return; }
     addChild(editing, selected, pick, radial);
     render();
+  }
+}
+
+function paintYard(canvas, design) {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = rect.width;
+  const h = rect.height;
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, "#7eb7ea");
+  sky.addColorStop(0.62, "#d5ecff");
+  sky.addColorStop(1, "#67a356");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#8d887e";
+  ctx.fillRect(w * 0.28, h * 0.86, w * 0.44, 8);
+  try {
+    const vessel = compileDesign(design);
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    vessel.parts.forEach((part) => {
+      minY = Math.min(minY, part.localY - part.h / 2);
+      maxY = Math.max(maxY, part.localY + part.h / 2);
+      minX = Math.min(minX, part.localX - part.w);
+      maxX = Math.max(maxX, part.localX + part.w);
+    });
+    const rh = Math.max(4, maxY - minY);
+    const rw = Math.max(2, maxX - minX);
+    const scale = Math.min((h * 0.7) / rh, (w * 0.5) / rw);
+    const midY = (minY + maxY) / 2;
+    ctx.save();
+    ctx.translate(w / 2, h * 0.48);
+    vessel.phi = Math.PI / 2;
+    vessel.comY = midY;
+    drawCraft(ctx, vessel, scale, 0, 0);
+    ctx.restore();
+  } catch (error) {
+    ctx.fillStyle = "#102033";
+    ctx.font = "18px Vazirmatn, Tahoma";
+    ctx.fillText("این طرح هنوز کامل نیست", 24, 40);
   }
 }
 
@@ -434,12 +486,17 @@ document.querySelector("#enter").onclick = async () => {
   audio.unlock();
   try { const saved = await loadSave(); if (saved) game = saved; }
   catch { toast("حافظه‌ی این مرورگر باز نشد. بازی بدون ذخیره ادامه پیدا می‌کند."); }
+  game.sound = true;
+  audio.setOn(true);
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   welcome.hidden = true;
   app.hidden = false;
   render();
   if (!game.seenTutorial) tutorial();
 };
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") audio.resume();
+});
 document.querySelector("#sound").onclick = () => {
   game.sound = !game.sound;
   audio.setOn(game.sound);

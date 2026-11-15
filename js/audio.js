@@ -2,6 +2,8 @@ export function createAudio() {
   let ctx = null;
   let on = false;
   let engine = null;
+  let filter = null;
+  let rumble = null;
   let engineGain = null;
 
   function ensure() {
@@ -12,12 +14,18 @@ export function createAudio() {
     return ctx;
   }
 
-  function noise(seconds) {
+  function noiseBuffer(seconds) {
     const context = ensure();
     if (!context) return null;
-    const buffer = context.createBuffer(1, Math.floor(context.sampleRate * seconds), context.sampleRate);
+    const count = Math.floor(context.sampleRate * seconds);
+    const buffer = context.createBuffer(1, count, context.sampleRate);
     const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
+    let brown = 0;
+    for (let i = 0; i < count; i += 1) {
+      const white = Math.random() * 2 - 1;
+      brown = brown * 0.98 + white * 0.02;
+      data[i] = brown * 3.2 + white * 0.15;
+    }
     return buffer;
   }
 
@@ -26,58 +34,68 @@ export function createAudio() {
     setOn(value) {
       on = !!value;
       if (!on) this.engine(0);
+      else ensure();
     },
     get on() { return on; },
     engine(amount) {
       const context = ensure();
       if (!context || !on) return;
-      if (amount <= 0.02) {
-        if (engineGain) engineGain.gain.setTargetAtTime(0.0001, context.currentTime, 0.05);
-        return;
-      }
       if (!engine) {
         engine = context.createBufferSource();
-        engine.buffer = noise(1);
+        engine.buffer = noiseBuffer(2);
         engine.loop = true;
-        const filter = context.createBiquadFilter();
+        filter = context.createBiquadFilter();
         filter.type = "lowpass";
-        filter.frequency.value = 420;
+        filter.frequency.value = 280;
+        rumble = context.createOscillator();
+        rumble.type = "sawtooth";
+        rumble.frequency.value = 46;
+        const rumbleGain = context.createGain();
+        rumbleGain.gain.value = 0.35;
         engineGain = context.createGain();
         engineGain.gain.value = 0.0001;
         engine.connect(filter);
         filter.connect(engineGain);
+        rumble.connect(rumbleGain);
+        rumbleGain.connect(engineGain);
         engineGain.connect(context.destination);
         engine.start();
+        rumble.start();
       }
-      engineGain.gain.setTargetAtTime(0.03 * amount, context.currentTime, 0.05);
+      const level = Math.max(0, Math.min(1, amount));
+      engineGain.gain.setTargetAtTime(level <= 0.02 ? 0.0001 : 0.22 * level, context.currentTime, 0.08);
+      filter.frequency.setTargetAtTime(180 + level * 900, context.currentTime, 0.08);
+      rumble.frequency.setTargetAtTime(38 + level * 42, context.currentTime, 0.08);
     },
-    blip(freq) {
+    blip() {
       const context = ensure();
       if (!context || !on) return;
-      const osc = context.createOscillator();
+      const src = context.createBufferSource();
+      src.buffer = noiseBuffer(0.12);
+      const band = context.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.value = 1400;
       const gain = context.createGain();
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.04, context.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.25);
-      osc.connect(gain);
+      gain.gain.setValueAtTime(0.2, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.12);
+      src.connect(band);
+      band.connect(gain);
       gain.connect(context.destination);
-      osc.start();
-      osc.stop(context.currentTime + 0.3);
+      src.start();
     },
     boom() {
       const context = ensure();
       if (!context || !on) return;
       const src = context.createBufferSource();
-      src.buffer = noise(0.4);
-      const filter = context.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 180;
+      src.buffer = noiseBuffer(0.7);
+      const low = context.createBiquadFilter();
+      low.type = "lowpass";
+      low.frequency.value = 140;
       const gain = context.createGain();
-      gain.gain.setValueAtTime(0.08, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.4);
-      src.connect(filter);
-      filter.connect(gain);
+      gain.gain.setValueAtTime(0.35, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.7);
+      src.connect(low);
+      low.connect(gain);
       gain.connect(context.destination);
       src.start();
     },

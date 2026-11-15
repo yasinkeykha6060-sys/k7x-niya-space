@@ -29,22 +29,21 @@
   <section id="view">
     <canvas id="sky"></canvas>
     <div class="hud" id="hud"></div>
-    <div class="controls">
-      <input id="throttle" type="range" min="0" max="100" value="0">
-      <div class="stick">
-        <button class="btn ghost" id="left" type="button">چپ</button>
-        <button class="btn ghost" id="right" type="button">راست</button>
-        <button class="btn" id="stage" type="button">جدایش</button>
-        <button class="btn ghost" id="sas" type="button">کمک</button>
-        <button class="btn ghost" id="auto" type="button">هدایت</button>
-        <button class="btn ghost" id="warp" type="button">زمان</button>
-        <button class="btn ghost" id="map" type="button">نقشه</button>
-        <button class="btn ghost" id="chute" type="button">چتر</button>
-        <button class="btn ghost" id="pause" type="button">توقف</button>
-        <button class="btn ghost" id="deploy" type="button">ماهواره</button>
-        <button class="btn ghost" id="end" type="button">پایان</button>
-      </div>
-    </div>
+    <aside class="dock left" id="stages"></aside>
+    <aside class="dock right">
+      <button id="stage" type="button">جدایش</button>
+      <button id="left" type="button">چپ</button>
+      <button id="right" type="button">راست</button>
+      <button id="sas" type="button">کمک</button>
+      <button id="auto" type="button">هدایت</button>
+      <button id="warp" type="button">زمان</button>
+      <button id="map" type="button">نقشه</button>
+      <button id="chute" type="button">چتر</button>
+      <button id="pause" type="button">توقف</button>
+      <button id="deploy" type="button">ماهواره</button>
+      <button id="end" type="button">پایان</button>
+    </aside>
+    <label class="throttle">گاز<input id="throttle" type="range" min="0" max="100" value="0"></label>
   </section>
   <script type="module" src="js/main.js"></script>
 </body>
