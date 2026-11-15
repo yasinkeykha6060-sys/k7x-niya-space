@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1240">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>شرکت فضایی نیایش</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <section class="welcome" id="welcome">
+    <div class="card">
+      <h1 id="hello"></h1>
+      <p id="hello-text" style="margin:12px 0 18px"></p>
+      <button class="btn" id="enter" type="button">ورود به شرکت</button>
+    </div>
+  </section>
+  <div class="app" id="app" hidden>
+    <header class="top">
+      <h1 id="title"></h1>
+      <button class="btn ghost" id="sound" type="button">صدا</button>
+    </header>
+    <nav class="nav" id="nav"></nav>
+    <main class="screen" id="screen"></main>
+  </div>
+  <section id="view">
+    <canvas id="sky"></canvas>
+    <div class="hud" id="hud"></div>
+    <div class="controls">
+      <input id="throttle" type="range" min="0" max="100" value="0">
+      <div class="stick">
+        <button class="btn ghost" id="left" type="button">چپ</button>
+        <button class="btn ghost" id="right" type="button">راست</button>
+        <button class="btn" id="stage" type="button">جدایش</button>
+        <button class="btn ghost" id="sas" type="button">کمک</button>
+        <button class="btn ghost" id="auto" type="button">هدایت</button>
+        <button class="btn ghost" id="warp" type="button">زمان</button>
+        <button class="btn ghost" id="map" type="button">نقشه</button>
+        <button class="btn ghost" id="chute" type="button">چتر</button>
+        <button class="btn ghost" id="pause" type="button">توقف</button>
+        <button class="btn ghost" id="deploy" type="button">ماهواره</button>
+        <button class="btn ghost" id="end" type="button">پایان</button>
+      </div>
+    </div>
+  </section>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
