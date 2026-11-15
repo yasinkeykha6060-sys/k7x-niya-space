@@ -1,0 +1,41 @@
+export const PARTS = {
+  "probe": { id: "probe", name: "مغز کاوشگر", kind: "command", dry: 180, fuel: 0, w: 0.8, h: 0.7, area: 0.5, cd: 0.45, cn: 0.2, strength: 180000, heatMax: 900, cost: 4000, wheelTorque: 4000, battery: 80, tech: "start" },
+  "capsule": { id: "capsule", name: "کپسول نیایش", kind: "command", dry: 1400, fuel: 0, w: 1.6, h: 1.5, area: 2.0, cd: 0.5, cn: 0.15, strength: 220000, heatMax: 1400, cost: 12000, wheelTorque: 8000, crew: 1, battery: 40, tech: "start" },
+  "fairing": { id: "fairing", name: "فیرینگ", kind: "fairing", dry: 350, fuel: 0, w: 1.8, h: 2.2, area: 2.5, cd: 0.25, cn: 0.05, strength: 90000, heatMax: 500, cost: 2500, tech: "orbit" },
+  "tank-s": { id: "tank-s", name: "مخزن کوچک", kind: "tank", dry: 550, fuel: 10000, w: 1.2, h: 3.4, area: 1.1, cd: 0.32, cn: 0.35, strength: 260000, heatMax: 700, cost: 2200, fuelType: "kerolox", tech: "start" },
+  "tank-m": { id: "tank-m", name: "مخزن متوسط", kind: "tank", dry: 900, fuel: 14000, w: 1.6, h: 4.2, area: 2.0, cd: 0.3, cn: 0.3, strength: 340000, heatMax: 700, cost: 4200, fuelType: "kerolox", tech: "orbit" },
+  "tank-l": { id: "tank-l", name: "مخزن بزرگ", kind: "tank", dry: 2200, fuel: 42000, w: 2.2, h: 7.5, area: 3.8, cd: 0.28, cn: 0.25, strength: 520000, heatMax: 700, cost: 9000, fuelType: "kerolox", tech: "orbit" },
+  "tank-h": { id: "tank-h", name: "مخزن هیدروژن", kind: "tank", dry: 700, fuel: 6000, w: 1.8, h: 5.5, area: 2.5, cd: 0.3, cn: 0.25, strength: 240000, heatMax: 650, cost: 8000, fuelType: "hydrolox", tech: "upper" },
+  "srb": { id: "srb", name: "بوستر جامد شهاب", kind: "engine", dry: 1800, fuel: 14000, w: 1.1, h: 8, area: 0.95, cd: 0.4, cn: 0.2, strength: 300000, heatMax: 900, cost: 6000, tech: "start", engine: { thrustSL: 620000, thrustVac: 680000, ispSL: 230, ispVac: 255, gimbal: 0, solid: true, failRate: 0.00002 } },
+  "kero": { id: "kero", name: "موتور مهتاب", kind: "engine", dry: 520, fuel: 0, w: 1.2, h: 1.6, area: 1.1, cd: 0.4, cn: 0.05, strength: 280000, heatMax: 1100, cost: 14000, fuelType: "kerolox", tech: "orbit", engine: { thrustSL: 760000, thrustVac: 845000, ispSL: 285, ispVac: 312, gimbal: 0.12, failRate: 0.00003 } },
+  "kero-s": { id: "kero-s", name: "موتور مهتاب کوچک", kind: "engine", dry: 280, fuel: 0, w: 0.9, h: 1.2, area: 0.64, cd: 0.4, cn: 0.05, strength: 200000, heatMax: 1000, cost: 8000, fuelType: "kerolox", tech: "start", engine: { thrustSL: 250000, thrustVac: 285000, ispSL: 282, ispVac: 311, gimbal: 0.14, failRate: 0.00003 } },
+  "hydro": { id: "hydro", name: "موتور نسیم", kind: "engine", dry: 180, fuel: 0, w: 0.8, h: 1.3, area: 0.5, cd: 0.35, cn: 0.04, strength: 140000, heatMax: 900, cost: 18000, fuelType: "hydrolox", tech: "upper", engine: { thrustSL: 30000, thrustVac: 110000, ispSL: 200, ispVac: 450, gimbal: 0.08, failRate: 0.00002 } },
+  "meth": { id: "meth", name: "موتور آتش", kind: "engine", dry: 900, fuel: 0, w: 1.4, h: 2.1, area: 1.5, cd: 0.38, cn: 0.05, strength: 360000, heatMax: 1300, cost: 28000, fuelType: "methalox", tech: "heavy", engine: { thrustSL: 1400000, thrustVac: 1600000, ispSL: 330, ispVac: 355, gimbal: 0.1, failRate: 0.00004 } },
+  "tank-meth": { id: "tank-meth", name: "مخزن متان", kind: "tank", dry: 1600, fuel: 28000, w: 2, h: 6.5, area: 3.1, cd: 0.3, cn: 0.25, strength: 420000, heatMax: 750, cost: 11000, fuelType: "methalox", tech: "heavy" },
+  "ion": { id: "ion", name: "موتور کرم شب‌تاب", kind: "engine", dry: 90, fuel: 80, w: 0.5, h: 0.6, area: 0.2, cd: 0.3, cn: 0.02, strength: 40000, heatMax: 400, cost: 22000, tech: "ion", engine: { thrustSL: 40, thrustVac: 700, ispSL: 800, ispVac: 3200, gimbal: 0, failRate: 0.00001 } },
+  "rcs": { id: "rcs", name: "رانشگر ریز", kind: "engine", dry: 40, fuel: 40, w: 0.3, h: 0.3, area: 0.08, cd: 0.5, cn: 0.1, strength: 20000, heatMax: 400, cost: 800, tech: "orbit", engine: { thrustSL: 1500, thrustVac: 1800, ispSL: 220, ispVac: 260, gimbal: 0, failRate: 0 } },
+  "decoupler": { id: "decoupler", name: "جداکننده", kind: "decoupler", dry: 80, fuel: 0, w: 1.6, h: 0.25, area: 0.3, cd: 0.2, cn: 0, strength: 80000, heatMax: 400, cost: 600, decoupler: true, tech: "start" },
+  "fin": { id: "fin", name: "بالچه", kind: "fin", dry: 70, fuel: 0, w: 1.1, h: 1.2, area: 1.3, cd: 0.55, cn: 1.8, strength: 420000, heatMax: 800, cost: 400, tech: "start" },
+  "chute": { id: "chute", name: "چتر", kind: "chute", dry: 90, fuel: 0, w: 0.6, h: 0.4, area: 0.2, cd: 0.4, cn: 0, strength: 30000, heatMax: 500, cost: 700, chute: true, tech: "start" },
+  "legs": { id: "legs", name: "پایه‌ی فرود", kind: "legs", dry: 120, fuel: 0, w: 1.4, h: 0.8, area: 0.4, cd: 0.6, cn: 0.2, strength: 100000, heatMax: 600, cost: 900, legs: true, tech: "land" },
+  "shield": { id: "shield", name: "سپر گرما", kind: "shield", dry: 250, fuel: 0, w: 1.6, h: 0.35, area: 2, cd: 0.9, cn: 0.1, strength: 200000, heatMax: 20000, cost: 3500, shield: true, tech: "land" },
+  "solar": { id: "solar", name: "پنل خورشیدی", kind: "solar", dry: 40, fuel: 0, w: 1.6, h: 0.2, area: 0.15, cd: 0.8, cn: 0.4, strength: 15000, heatMax: 300, cost: 1500, solar: 30, tech: "sat" },
+  "battery": { id: "battery", name: "باتری", kind: "battery", dry: 60, fuel: 0, w: 0.5, h: 0.4, area: 0.2, cd: 0.4, cn: 0, strength: 20000, heatMax: 300, cost: 800, battery: 120, tech: "sat" },
+  "antenna": { id: "antenna", name: "آنتن", kind: "antenna", dry: 20, fuel: 0, w: 0.4, h: 0.8, area: 0.05, cd: 0.5, cn: 0.2, strength: 8000, heatMax: 250, cost: 600, antenna: true, tech: "sat" },
+  "wheel": { id: "wheel", name: "چرخ واکنشی", kind: "wheel", dry: 50, fuel: 0, w: 0.4, h: 0.4, area: 0.12, cd: 0.3, cn: 0, strength: 20000, heatMax: 300, cost: 2000, wheelTorque: 14000, tech: "orbit" },
+  "sat-com": { id: "sat-com", name: "ماهواره‌ی ارتباطی", kind: "payload", dry: 500, fuel: 0, w: 1.2, h: 1.4, area: 1.1, cd: 0.45, cn: 0.2, strength: 40000, heatMax: 400, cost: 20000, payload: "com", tech: "sat" },
+  "sat-cam": { id: "sat-cam", name: "ماهواره‌ی تصویر", kind: "payload", dry: 420, fuel: 0, w: 1.1, h: 1.3, area: 1, cd: 0.45, cn: 0.2, strength: 40000, heatMax: 400, cost: 18000, payload: "cam", tech: "sat" },
+  "sat-sci": { id: "sat-sci", name: "ماهواره‌ی علمی", kind: "payload", dry: 380, fuel: 0, w: 1, h: 1.2, area: 0.8, cd: 0.45, cn: 0.2, strength: 40000, heatMax: 400, cost: 16000, payload: "sci", tech: "sat" },
+  "probe-ship": { id: "probe-ship", name: "کاوشگر", kind: "payload", dry: 700, fuel: 0, w: 1.4, h: 1.6, area: 1.5, cd: 0.5, cn: 0.2, strength: 60000, heatMax: 800, cost: 24000, payload: "probe", tech: "deep" }
+};
+
+export const TECH = [
+  { id: "start", name: "شروع", cost: 0, needs: [] },
+  { id: "orbit", name: "مدار", cost: 40, needs: ["start"] },
+  { id: "upper", name: "مرحله‌ی بالا", cost: 70, needs: ["orbit"] },
+  { id: "sat", name: "ماهواره", cost: 50, needs: ["orbit"] },
+  { id: "land", name: "بازگشت", cost: 40, needs: ["start"] },
+  { id: "heavy", name: "موتور سنگین", cost: 120, needs: ["upper"] },
+  { id: "ion", name: "یونی", cost: 90, needs: ["sat"] },
+  { id: "deep", name: "عمق فضا", cost: 100, needs: ["sat", "upper"] }
+];
